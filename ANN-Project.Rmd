@@ -1,0 +1,88 @@
+---
+title: "ANN"
+author: "Mark Bruno"
+date: "3/22/2022"
+output:
+  html_document:
+    toc:  true
+    toc_depth:  6
+    toc_float: true
+    number_sections: true
+    code_folding: show
+    theme: united
+    highlight:  tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Read Data
+
+```{r}
+hrdata <- read.csv("hrdata.csv")
+str(hrdata)
+summary(hrdata)
+```
+#Clean Data
+```{r}
+hrdata$X <- NULL
+hrdata$sales <- NULL
+hrdata$salary <- NULL
+
+hrdatamm <- as.data.frame(model.matrix(~. -1, data = hrdata))
+rm(hrdata)
+
+normalize <- function(x)
+{(x-min(x))/(max(x)-min(x))}
+hrnormal <- as.data.frame(lapply(hrdatamm, normalize))
+rm(hrdatamm)
+
+str(hrnormal)
+summary(hrnormal)
+
+```
+#Test and Train
+```{r}
+set.seed(12345)
+test_set <- sample(1:nrow(hrnormal), 0.2*nrow(hrnormal))
+hr_test <- hrnormal[test_set,]
+hr_train <- hrnormal[test_set,]
+```
+# Build Model
+
+```{r}
+library(neuralnet)
+model1 <-neuralnet(left ~ .,data = hr_train)
+```
+```{r}
+model2 <- neuralnet(left~ ., data = hr_train, hidden = 5, stepmax = 1e8)
+```
+
+```{r}
+plot(model1)
+plot(model2)
+```
+
+# Predict Test Data
+```{r}
+#modelresult <- compute(model1,hr_test)
+#modelpredicition <- modelresult$net.result
+#summary(modelpredicition)
+p1 <- predict(model1, hr_test)
+summary(p1)
+p1library <- ifelse(p1 >=0.5,1,0)
+
+p2 <- predict(model2, hr_test)
+summary(p2)
+p2library <- ifelse(p2 >=0.5,1,0)
+
+```
+
+#Evaluate Model
+
+```{r}
+library(gmodels)
+CrossTable(p1library, hr_test$left, prop.chisq = F, prop.r = F,prop.c = F,prop.t = F)  
+CrossTable(p2library, hr_test$left, prop.chisq = F, prop.r = F,prop.c = F,prop.t = F)  
+```
+
